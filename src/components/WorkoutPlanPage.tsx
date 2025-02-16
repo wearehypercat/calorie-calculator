@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowLeft, Dumbbell, Info, Clock, RotateCcw } from 'lucide-react';
 import { MealPlan, WorkoutPlan } from './types';
 
 type Props = {
@@ -9,134 +9,92 @@ type Props = {
 };
 
 function WorkoutPlanPage({ workoutPlan, mealPlan, onBack }: Props) {
-  // Convert workout text with \n to array of sections
-  const workoutSections = workoutPlan.workout.split('\\n\\n').map(section => {
-    const [day, ...exercises] = section.split('\\n');
-    return {
-      day: day.trim(),
-      exercises: exercises.map(ex => ex.trim().replace('- ', ''))
-    };
-  });
-
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
+      {/* Motivation Banner */}
       <div className="relative h-[30vh] overflow-hidden flex items-center justify-center bg-gradient-to-r from-zinc-900 to-black">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070')] bg-cover bg-center opacity-20"></div>
-        <div className="relative z-10 text-center py-12 px-4">
-          <h1 className="text-4xl md:text-6xl font-oswald font-black tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent mb-4">
-            YOUR COMPLETE FITNESS PLAN
+        <div className="relative z-10 text-center px-4">
+          <h1 className="text-4xl md:text-6xl font-oswald mb-4 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+            Your Personalized Workout Plan
           </h1>
-          <p className="text-zinc-400 text-sm md:text-base tracking-wide">
-            Customized workout and nutrition plan to help you reach your goals
-          </p>
+          <p className="text-xl text-zinc-300">{workoutPlan.motivation}</p>
         </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-12">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-8"
+          className="absolute top-4 left-4 text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Calculator
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back</span>
         </button>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Workout Plan Section */}
-          <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-900/95 to-zinc-800/95 backdrop-blur-sm rounded-2xl p-6 md:p-8 shadow-2xl border border-zinc-800/50">
-            <div className="flex items-center gap-3 mb-6">
-              <Sparkles className="w-6 h-6 text-red-500" />
-              <h2 className="text-2xl font-oswald text-white">Your Workout Plan</h2>
-            </div>
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Training Tips */}
+        <div className="mb-12 bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+          <div className="flex items-center gap-3 mb-6">
+            <Info className="w-6 h-6 text-red-500" />
+            <h2 className="text-2xl font-oswald">Training Tips</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {workoutPlan.tips.map((tip, index) => (
+              <div key={index} className="flex items-start gap-3 bg-black/30 p-4 rounded-lg border border-zinc-800">
+                <Sparkles className="w-5 h-5 text-orange-500 mt-1" />
+                <p className="text-zinc-300">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-            <div className="space-y-8">
-              {workoutSections.map((section, index) => (
-                <div key={index} className="bg-black/30 rounded-xl border border-zinc-800 p-6">
-                  <h3 className="text-xl font-oswald text-red-500 mb-4">{section.day}</h3>
-                  <div className="space-y-3">
-                    {section.exercises.map((exercise, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-oswald text-zinc-400 flex-shrink-0 mt-0.5">
-                          {i + 1}
-                        </div>
-                        <p className="text-zinc-300">{exercise}</p>
-                      </div>
-                    ))}
-                  </div>
+        {/* Workout Days */}
+        <div className="space-y-8">
+          {workoutPlan.workout.map((day, dayIndex) => (
+            <div key={dayIndex} className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
+              <div className="flex items-center gap-3 mb-6">
+                <Dumbbell className="w-6 h-6 text-red-500" />
+                <h2 className="text-2xl font-oswald">{day.day}</h2>
+              </div>
+
+              {/* Warm-up Section */}
+              <div className="mb-6 bg-black/30 p-4 rounded-lg border border-zinc-800">
+                <div className="flex items-center gap-2 text-orange-500 mb-2">
+                  <RotateCcw className="w-5 h-5" />
+                  <h3 className="font-semibold">Warm-up</h3>
                 </div>
-              ))}
-            </div>
+                <p className="text-zinc-300">{day.warmup}</p>
+              </div>
 
-            <div className="mt-6 p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-lg border border-red-500/20">
-              <p className="text-center text-zinc-300 font-oswald">{workoutPlan.motivation}</p>
-            </div>
-          </div>
-
-          {/* Meal Plan Section */}
-          <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-900/95 to-zinc-800/95 backdrop-blur-sm rounded-2xl p-6 md:p-8 shadow-2xl border border-zinc-800/50">
-            <div className="flex items-center gap-3 mb-6">
-              <Sparkles className="w-6 h-6 text-green-500" />
-              <h2 className="text-2xl font-oswald text-white">Your Meal Plan</h2>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">Day</th>
-                    <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                      Breakfast
-                      <span className="block text-xs text-zinc-400 font-normal">400-500 cal</span>
-                    </th>
-                    <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                      Lunch
-                      <span className="block text-xs text-zinc-400 font-normal">500-600 cal</span>
-                    </th>
-                    <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                      Dinner
-                      <span className="block text-xs text-zinc-400 font-normal">500-600 cal</span>
-                    </th>
-                    <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                      Snacks
-                      <span className="block text-xs text-zinc-400 font-normal">200-300 cal each</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mealPlan.weekPlan.map((day) => (
-                    <tr key={day.day} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-4 py-4 text-zinc-300 font-oswald">{day.day}</td>
-                      <td className="px-4 py-4">
-                        <div className="text-zinc-300">{day.breakfast.meal}</div>
-                        <div className="text-xs text-zinc-500 mt-1">{day.breakfast.calories} cal</div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-zinc-300">{day.lunch.meal}</div>
-                        <div className="text-xs text-zinc-500 mt-1">{day.lunch.calories} cal</div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-zinc-300">{day.dinner.meal}</div>
-                        <div className="text-xs text-zinc-500 mt-1">{day.dinner.calories} cal</div>
-                      </td>
-                      <td className="px-4 py-4">
-                        {day.snacks.map((snack, i) => (
-                          <div key={i} className="mb-2 last:mb-0">
-                            <div className="text-zinc-300">{i + 1}. {snack.meal}</div>
-                            <div className="text-xs text-zinc-500 mt-1">{snack.calories} cal</div>
+              {/* Exercises */}
+              <div className="space-y-4">
+                {day.exercises.map((exercise, index) => (
+                  <div key={index} className="bg-black/30 p-4 rounded-lg border border-zinc-800">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-white mb-2">
+                          {index + 1}. {exercise.name}
+                        </h3>
+                        <p className="text-zinc-400 text-sm mb-3">{exercise.notes}</p>
+                        <div className="flex flex-wrap gap-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full" />
+                            <span className="text-zinc-300">{exercise.sets} sets</span>
                           </div>
-                        ))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                            <span className="text-zinc-300">{exercise.reps} reps</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-zinc-500" />
+                            <span className="text-zinc-300">Rest: {exercise.rest}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-
-            <div className="mt-6 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
-              <p className="text-center text-zinc-400">{mealPlan.tips}</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

@@ -17,7 +17,22 @@ export type MealPlan = {
   weekPlan: DayPlan[];
 };
 
+export type Exercise = {
+  name: string;
+  sets: string;
+  reps: string;
+  rest: string;
+  notes: string;
+};
+
+export type WorkoutDay = {
+  day: string;
+  warmup: string;
+  exercises: Exercise[];
+};
+
 export type WorkoutPlan = {
-  workout: string;
+  workout: WorkoutDay[];
   motivation: string;
+  tips: string[];
 }; 

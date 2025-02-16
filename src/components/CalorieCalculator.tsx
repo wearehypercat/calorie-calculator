@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Sparkles, ChevronDown, X } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { MealPlan, WorkoutPlan } from './types';
+import WorkoutPlanPage from './WorkoutPlanPage';
 
 type Gender = 'male' | 'female';
 
@@ -70,22 +72,48 @@ Response must be VALID JSON in this format:
 
 Keep it practical, science-based, and easy to implement.`;
 
-const WORKOUT_PLAN_PROMPT = `You are an expert fitness coach. Create a customized workout plan based on the following:
+const WORKOUT_PLAN_PROMPT = `You are an expert fitness coach. Create a comprehensive 4-day workout plan based on the following:
 - Goal: Complement a {calories} calorie diet plan
 - Focus: Full body fitness and strength
+- Include a mix of strength training and cardio
+- Each exercise should include sets, reps, and rest periods
 
 Response must be VALID JSON in this format:
 {
-  "workout": "MONDAY - FULL BODY:\\n- 3x12 Squats\\n- 3x10 Push-ups\\n...\\n\\nWEDNESDAY - CARDIO:\\n...",
-  "motivation": "Transform your body through dedication and consistent effort! 💪"
+  "workout": [
+    {
+      "day": "DAY 1 - PUSH",
+      "warmup": "5-10 minutes of dynamic stretching, focusing on shoulders and chest",
+      "exercises": [
+        {
+          "name": "Barbell Bench Press",
+          "sets": "4",
+          "reps": "8-10",
+          "rest": "90 seconds",
+          "notes": "Focus on controlled descent, keep core tight"
+        }
+      ]
+    }
+  ],
+  "motivation": "Transform your body through dedication and consistent effort! 💪",
+  "tips": [
+    "Warm up properly before each session",
+    "Stay hydrated throughout your workout",
+    "Focus on form over weight",
+    "Progressive overload is key to growth"
+  ]
 }
 
 Rules:
-1. Use \\n for line breaks
-2. Include 3-4 days of workouts
-3. Keep motivation under 100 characters
+1. Include 4 days of workouts (Push, Pull, Legs, Full Body/HIIT)
+2. Each day should have 5-6 exercises
+3. Include detailed form notes for each exercise
 4. Must be valid JSON
-5. Include a mix of strength and cardio`;
+5. Keep motivation under 100 characters
+6. Include 4-5 actionable tips
+7. Specify rest periods between sets
+8. Include warm-up suggestions for each day
+9. Each exercise must include name, sets, reps, rest, and form notes`;
 
 function CalorieCalculator() {
   const [gender, setGender] = useState<Gender>('male');
@@ -101,6 +129,7 @@ function CalorieCalculator() {
   const [emailError, setEmailError] = useState('');
   const [isEmailSubmitted, setIsEmailSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showWorkoutPlan, setShowWorkoutPlan] = useState(false);
 
   const calculateBMR = () => {
     const w = parseFloat(weight);
@@ -230,7 +259,7 @@ function CalorieCalculator() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       setEmailError('Email is required');
@@ -241,8 +270,19 @@ function CalorieCalculator() {
       return;
     }
     setEmailError('');
-    setIsEmailSubmitted(true);
-    generateWorkoutPlan();
+    setIsLoading(true);
+    
+    try {
+      await generateWorkoutPlan();
+      setIsEmailSubmitted(true);
+      setShowEmailPopup(false);
+      setShowWorkoutPlan(true);
+    } catch (error) {
+      console.error('Error generating workout plan:', error);
+      setEmailError('Failed to generate workout plan. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCalculate = async () => {
@@ -267,247 +307,248 @@ function CalorieCalculator() {
 
   return (
     <div className="relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-zinc-900/80 to-black pointer-events-none"></div>
-      <div className="container mx-auto px-4 max-w-4xl relative z-10 py-8 md:py-16">
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <div className="h-[1px] w-6 md:w-12 bg-gradient-to-r from-transparent to-zinc-600"></div>
-          <h1 className="text-3xl md:text-5xl font-oswald tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-            CALORIE CALCULATOR
-          </h1>
-          <div className="h-[1px] w-6 md:w-12 bg-gradient-to-l from-transparent to-zinc-600"></div>
-        </div>
-
-        <div className="text-center text-zinc-400 mb-8 text-xs md:text-base px-4">
-          Calculate your daily calorie needs and get a personalized meal plan
-        </div>
-
-        <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-900/95 to-zinc-800/95 backdrop-blur-sm rounded-2xl p-6 md:p-12 mb-8 shadow-2xl border border-zinc-800/50">
-          <div className="max-w-xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">GENDER</label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value as Gender)}
-                  className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
-                >
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">AGE (YEARS)</label>
-                <input
-                  type="number"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">WEIGHT (KG)</label>
-                <input
-                  type="number"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-zinc-400 mb-2">HEIGHT (CM)</label>
-                <input
-                  type="number"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
-                  className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
-                  placeholder="0"
-                />
-              </div>
+      {showWorkoutPlan && workoutPlan && mealPlan ? (
+        <WorkoutPlanPage
+          workoutPlan={workoutPlan}
+          mealPlan={mealPlan}
+          onBack={() => setShowWorkoutPlan(false)}
+        />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-b from-black via-zinc-900/80 to-black pointer-events-none"></div>
+          <div className="container mx-auto px-4 max-w-4xl relative z-10 py-8 md:py-16">
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="h-[1px] w-6 md:w-12 bg-gradient-to-r from-transparent to-zinc-600"></div>
+              <h1 className="text-3xl md:text-5xl font-oswald tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+                CALORIE CALCULATOR
+              </h1>
+              <div className="h-[1px] w-6 md:w-12 bg-gradient-to-l from-transparent to-zinc-600"></div>
             </div>
 
-            <button
-              onClick={handleCalculate}
-              disabled={!age || !weight || !height || isLoading}
-              className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg py-4 text-xl font-oswald tracking-wide hover:from-red-600 hover:to-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>GENERATING YOUR PLAN...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  <span>CALCULATE & GET PERSONALIZED PLAN</span>
-                </>
-              )}
-            </button>
+            <div className="text-center text-zinc-400 mb-8 text-xs md:text-base px-4">
+              Calculate your daily calorie needs and get a personalized meal plan
+            </div>
 
-            {bmr && (
-              <div className="mt-8 text-center py-6 md:py-8 bg-black/30 rounded-xl border border-zinc-800">
-                <div className="text-sm md:text-base text-zinc-400 mb-4 uppercase tracking-wider">
-                  Your Daily Calorie Needs (BMR)
-                </div>
-                <div className="text-5xl md:text-7xl font-oswald font-bold tracking-tight bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-                  {bmr}
-                  <span className="text-xl md:text-3xl text-zinc-400 ml-2">KCAL</span>
-                </div>
-              </div>
-            )}
-
-            {nutritionTip && (
-              <div className="mt-8 bg-black/30 rounded-xl border border-zinc-800 p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Sparkles className="w-5 h-5 text-red-500" />
-                  <h3 className="text-xl font-oswald text-white">{nutritionTip.title}</h3>
-                </div>
-                <p className="text-zinc-300 mb-4">{nutritionTip.explanation}</p>
-                <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
-                  <p className="text-red-400 font-semibold">Action Step:</p>
-                  <p className="text-zinc-300">{nutritionTip.actionItem}</p>
-                </div>
-              </div>
-            )}
-
-            {mealPlan && (
-              <div className="mt-8">
-                <div className="bg-black/30 rounded-xl border border-zinc-800 p-6">
-                  <h2 className="text-2xl font-oswald mb-4 text-center">Your 5-Day Meal Plan</h2>
-                  <p className="text-zinc-300 mb-6 text-center">{mealPlan.meals}</p>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">Day</th>
-                          <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                            Breakfast
-                            <span className="block text-xs text-zinc-400 font-normal">400-500 cal</span>
-                          </th>
-                          <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                            Lunch
-                            <span className="block text-xs text-zinc-400 font-normal">500-600 cal</span>
-                          </th>
-                          <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                            Dinner
-                            <span className="block text-xs text-zinc-400 font-normal">500-600 cal</span>
-                          </th>
-                          <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
-                            Snacks
-                            <span className="block text-xs text-zinc-400 font-normal">200-300 cal each</span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {mealPlan.weekPlan.map((day, index) => (
-                          <tr key={day.day} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                            <td className="px-4 py-4 text-zinc-300 font-oswald">{day.day}</td>
-                            <td className="px-4 py-4">
-                              <div className="text-zinc-300">{day.breakfast.meal}</div>
-                              <div className="text-xs text-zinc-500 mt-1">{day.breakfast.calories} cal</div>
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="text-zinc-300">{day.lunch.meal}</div>
-                              <div className="text-xs text-zinc-500 mt-1">{day.lunch.calories} cal</div>
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="text-zinc-300">{day.dinner.meal}</div>
-                              <div className="text-xs text-zinc-500 mt-1">{day.dinner.calories} cal</div>
-                            </td>
-                            <td className="px-4 py-4">
-                              {day.snacks.map((snack, i) => (
-                                <div key={i} className="mb-2 last:mb-0">
-                                  <div className="text-zinc-300">{i + 1}. {snack.meal}</div>
-                                  <div className="text-xs text-zinc-500 mt-1">{snack.calories} cal</div>
-                                </div>
-                              ))}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-900/95 to-zinc-800/95 backdrop-blur-sm rounded-2xl p-6 md:p-12 mb-8 shadow-2xl border border-zinc-800/50">
+              <div className="max-w-xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm text-zinc-400 mb-2">GENDER</label>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value as Gender)}
+                      className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
+                    >
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
                   </div>
-
-                  <div className="mt-6 p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-lg border border-red-500/20">
-                    <p className="text-center text-zinc-400">{mealPlan.tips}</p>
-                  </div>
-                  
-                  <button
-                    onClick={() => setShowEmailPopup(true)}
-                    className="mt-6 w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg py-4 text-xl font-oswald tracking-wide hover:from-green-600 hover:to-emerald-600 transition-colors"
-                  >
-                    GET WORKOUT PLAN ($20)
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Email Popup */}
-        {showEmailPopup && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-8 max-w-md w-full border border-zinc-700 shadow-2xl animate-scale-in relative">
-              <button
-                onClick={() => {
-                  setShowEmailPopup(false);
-                  setIsEmailSubmitted(false);
-                }}
-                className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-
-              {isEmailSubmitted ? (
-                <>
-                  <div className="text-center py-8">
-                    <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Sparkles className="w-10 h-10" />
-                    </div>
-                    <h3 className="text-2xl font-oswald mb-4">Your Workout Plan is Ready!</h3>
-                  </div>
-                  {workoutPlan && (
-                    <div className="bg-black/30 rounded-xl border border-zinc-800 p-6">
-                      <pre className="whitespace-pre-wrap font-mono text-sm text-zinc-300">{workoutPlan.workout}</pre>
-                      <div className="mt-4 text-center text-zinc-400">{workoutPlan.motivation}</div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <form onSubmit={handleEmailSubmit} className="py-8">
-                  <h3 className="text-2xl font-oswald mb-6 text-center">Get Your Custom Workout Plan</h3>
-                  <div className="mb-4">
+                  <div>
+                    <label className="block text-sm text-zinc-400 mb-2">AGE (YEARS)</label>
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-lg focus:border-green-500 transition-colors"
+                      type="number"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
+                      placeholder="0"
                     />
-                    {emailError && (
-                      <div className="text-red-500 text-sm mt-2">{emailError}</div>
-                    )}
                   </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg py-4 text-xl font-oswald tracking-wide hover:from-green-600 hover:to-emerald-600 transition-colors"
-                  >
-                    PURCHASE & GET PLAN ($20)
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
+                  <div>
+                    <label className="block text-sm text-zinc-400 mb-2">WEIGHT (KG)</label>
+                    <input
+                      type="number"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-400 mb-2">HEIGHT (CM)</label>
+                    <input
+                      type="number"
+                      value={height}
+                      onChange={(e) => setHeight(e.target.value)}
+                      className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
 
-        {isLoading && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-red-500"></div>
+                <button
+                  onClick={handleCalculate}
+                  disabled={!age || !weight || !height || isLoading}
+                  className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg py-4 text-xl font-oswald tracking-wide hover:from-red-600 hover:to-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>GENERATING YOUR PLAN...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      <span>CALCULATE & GET PERSONALIZED PLAN</span>
+                    </>
+                  )}
+                </button>
+
+                {bmr && (
+                  <div className="mt-8 text-center py-6 md:py-8 bg-black/30 rounded-xl border border-zinc-800">
+                    <div className="text-sm md:text-base text-zinc-400 mb-4 uppercase tracking-wider">
+                      Your Daily Calorie Needs (BMR)
+                    </div>
+                    <div className="text-5xl md:text-7xl font-oswald font-bold tracking-tight bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+                      {bmr}
+                      <span className="text-xl md:text-3xl text-zinc-400 ml-2">KCAL</span>
+                    </div>
+                  </div>
+                )}
+
+                {nutritionTip && (
+                  <div className="mt-8 bg-black/30 rounded-xl border border-zinc-800 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Sparkles className="w-5 h-5 text-red-500" />
+                      <h3 className="text-xl font-oswald text-white">{nutritionTip.title}</h3>
+                    </div>
+                    <p className="text-zinc-300 mb-4">{nutritionTip.explanation}</p>
+                    <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
+                      <p className="text-red-400 font-semibold">Action Step:</p>
+                      <p className="text-zinc-300">{nutritionTip.actionItem}</p>
+                    </div>
+                  </div>
+                )}
+
+                {mealPlan && (
+                  <div className="mt-8">
+                    <div className="bg-black/30 rounded-xl border border-zinc-800 p-6">
+                      <h2 className="text-2xl font-oswald mb-4 text-center">Your 5-Day Meal Plan</h2>
+                      <p className="text-zinc-300 mb-6 text-center">{mealPlan.meals}</p>
+                      
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr>
+                              <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">Day</th>
+                              <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
+                                Breakfast
+                                <span className="block text-xs text-zinc-400 font-normal">400-500 cal</span>
+                              </th>
+                              <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
+                                Lunch
+                                <span className="block text-xs text-zinc-400 font-normal">500-600 cal</span>
+                              </th>
+                              <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
+                                Dinner
+                                <span className="block text-xs text-zinc-400 font-normal">500-600 cal</span>
+                              </th>
+                              <th className="bg-zinc-800/50 text-zinc-300 font-oswald tracking-wide px-4 py-3 text-left border-b border-zinc-700">
+                                Snacks
+                                <span className="block text-xs text-zinc-400 font-normal">200-300 cal each</span>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {mealPlan.weekPlan.map((day, index) => (
+                              <tr key={day.day} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                                <td className="px-4 py-4 text-zinc-300 font-oswald">{day.day}</td>
+                                <td className="px-4 py-4">
+                                  <div className="text-zinc-300">{day.breakfast.meal}</div>
+                                  <div className="text-xs text-zinc-500 mt-1">{day.breakfast.calories} cal</div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="text-zinc-300">{day.lunch.meal}</div>
+                                  <div className="text-xs text-zinc-500 mt-1">{day.lunch.calories} cal</div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="text-zinc-300">{day.dinner.meal}</div>
+                                  <div className="text-xs text-zinc-500 mt-1">{day.dinner.calories} cal</div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  {day.snacks.map((snack, i) => (
+                                    <div key={i} className="mb-2 last:mb-0">
+                                      <div className="text-zinc-300">{i + 1}. {snack.meal}</div>
+                                      <div className="text-xs text-zinc-500 mt-1">{snack.calories} cal</div>
+                                    </div>
+                                  ))}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="mt-6 p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-lg border border-red-500/20">
+                        <p className="text-center text-zinc-400">{mealPlan.tips}</p>
+                      </div>
+                      
+                      <button
+                        onClick={() => setShowEmailPopup(true)}
+                        className="mt-6 w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg py-4 text-xl font-oswald tracking-wide hover:from-green-600 hover:to-emerald-600 transition-colors"
+                      >
+                        GET WORKOUT PLAN ($20)
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {showEmailPopup && !isEmailSubmitted && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-8 max-w-md w-full border border-zinc-700 shadow-2xl animate-scale-in relative">
+                  <button
+                    onClick={() => setShowEmailPopup(false)}
+                    className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-oswald text-white mb-2">Get Your Workout Plan</h3>
+                    <p className="text-zinc-400">Enter your email to receive your personalized workout plan</p>
+                  </div>
+
+                  <form onSubmit={handleEmailSubmit} className="space-y-4">
+                    <div>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-red-500 transition-colors"
+                      />
+                      {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg py-4 text-xl font-oswald tracking-wide hover:from-red-600 hover:to-orange-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                          <span>GENERATING...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5" />
+                          <span>UNLOCK WORKOUT PLAN</span>
+                        </>
+                      )}
+                    </button>
+
+                    <p className="text-sm text-zinc-500 text-center">
+                      By submitting, you agree to our Terms of Service and Privacy Policy
+                    </p>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
