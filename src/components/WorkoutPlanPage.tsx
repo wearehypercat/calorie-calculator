@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ArrowLeft, Dumbbell, Info, Clock, RotateCcw } from 'lucide-react';
+import { Sparkles, Dumbbell, Info, Clock, RotateCcw } from 'lucide-react';
 import { MealPlan, WorkoutPlan } from './types';
 
 type Props = {
@@ -11,25 +11,13 @@ type Props = {
 function WorkoutPlanPage({ workoutPlan, mealPlan, onBack }: Props) {
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Motivation Banner */}
-      <div className="relative h-[30vh] overflow-hidden flex items-center justify-center bg-gradient-to-r from-zinc-900 to-black">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070')] bg-cover bg-center opacity-20"></div>
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-4xl md:text-6xl font-oswald mb-4 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-            Your Personalized Workout Plan
-          </h1>
-          <p className="text-xl text-zinc-300">{workoutPlan.motivation}</p>
-        </div>
-        <button
-          onClick={onBack}
-          className="absolute top-4 left-4 text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Back</span>
-        </button>
-      </div>
+      {/* Simple Header */}
+      <div className="container mx-auto px-4 py-12 max-w-5xl">
+        <h1 className="text-4xl md:text-6xl font-oswald text-center mb-4 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+          Your Personalized Workout Plan
+        </h1>
+        <p className="text-xl text-center text-zinc-300 mb-12">{workoutPlan.motivation}</p>
 
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Training Tips */}
         <div className="mb-12 bg-zinc-900/50 rounded-xl p-6 border border-zinc-800">
           <div className="flex items-center gap-3 mb-6">
