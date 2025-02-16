@@ -6,6 +6,40 @@ import WorkoutPlanPage from './WorkoutPlanPage';
 
 type Gender = 'male' | 'female';
 
+type ActivityLevel = {
+  value: number;
+  label: string;
+  description: string;
+};
+
+const ACTIVITY_LEVELS: ActivityLevel[] = [
+  {
+    value: 1.2,
+    label: "Sedentary",
+    description: "Little or no exercise, desk job"
+  },
+  {
+    value: 1.375,
+    label: "Lightly Active",
+    description: "Light exercise 1-3 days/week"
+  },
+  {
+    value: 1.55,
+    label: "Moderately Active",
+    description: "Moderate exercise 3-5 days/week"
+  },
+  {
+    value: 1.725,
+    label: "Very Active",
+    description: "Hard exercise 6-7 days/week"
+  },
+  {
+    value: 1.9,
+    label: "Extremely Active",
+    description: "Hard daily exercise & physical job"
+  }
+];
+
 type MealItem = {
   meal: string;
   calories: number;
@@ -120,7 +154,9 @@ function CalorieCalculator() {
   const [age, setAge] = useState<string>('');
   const [weight, setWeight] = useState<string>('');
   const [height, setHeight] = useState<string>('');
+  const [activityLevel, setActivityLevel] = useState<number>(1.2);
   const [bmr, setBmr] = useState<number | null>(null);
+  const [tdee, setTdee] = useState<number | null>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [nutritionTip, setNutritionTip] = useState<{ title: string; explanation: string; actionItem: string } | null>(null);
@@ -139,11 +175,14 @@ function CalorieCalculator() {
     if (!w || !h || !a) return null;
 
     // Using Mifflin-St Jeor formula
-    const result = gender === 'male'
+    const baseBMR = gender === 'male'
       ? 10 * w + 6.25 * h - 5 * a + 5
       : 10 * w + 6.25 * h - 5 * a - 161;
 
-    return Math.round(result);
+    const calculatedBMR = Math.round(baseBMR);
+    const calculatedTDEE = Math.round(baseBMR * activityLevel);
+
+    return { bmr: calculatedBMR, tdee: calculatedTDEE };
   };
 
   const generateNutritionTip = async (calories: number) => {
@@ -286,16 +325,17 @@ function CalorieCalculator() {
   };
 
   const handleCalculate = async () => {
-    const calculatedBMR = calculateBMR();
-    if (calculatedBMR) {
+    const calculated = calculateBMR();
+    if (calculated) {
       setIsLoading(true);
-      setBmr(calculatedBMR);
+      setBmr(calculated.bmr);
+      setTdee(calculated.tdee);
       
       try {
-        // Generate both meal plan and nutrition tip simultaneously
+        // Generate both meal plan and nutrition tip simultaneously using TDEE
         await Promise.all([
-          generateMealPlan(calculatedBMR),
-          generateNutritionTip(calculatedBMR)
+          generateMealPlan(calculated.tdee),
+          generateNutritionTip(calculated.tdee)
         ]);
       } catch (error) {
         console.error('Error generating content:', error);
@@ -375,6 +415,21 @@ function CalorieCalculator() {
                   </div>
                 </div>
 
+                <div className="mb-6">
+                  <label className="block text-sm text-zinc-400 mb-2">ACTIVITY LEVEL</label>
+                  <select
+                    value={activityLevel}
+                    onChange={(e) => setActivityLevel(Number(e.target.value))}
+                    className="w-full bg-black/50 border border-zinc-700 rounded-lg px-4 py-3 text-xl font-oswald tracking-wide focus:border-red-500 transition-colors"
+                  >
+                    {ACTIVITY_LEVELS.map((level) => (
+                      <option key={level.value} value={level.value}>
+                        {level.label} - {level.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <button
                   onClick={handleCalculate}
                   disabled={!age || !weight || !height || isLoading}
@@ -393,14 +448,26 @@ function CalorieCalculator() {
                   )}
                 </button>
 
-                {bmr && (
-                  <div className="mt-8 text-center py-6 md:py-8 bg-black/30 rounded-xl border border-zinc-800">
-                    <div className="text-sm md:text-base text-zinc-400 mb-4 uppercase tracking-wider">
-                      Your Daily Calorie Needs (BMR)
+                {bmr && tdee && (
+                  <div className="mt-8 space-y-4">
+                    <div className="text-center py-6 md:py-8 bg-black/30 rounded-xl border border-zinc-800">
+                      <div className="text-sm md:text-base text-zinc-400 mb-4 uppercase tracking-wider">
+                        Your Basal Metabolic Rate (BMR)
+                      </div>
+                      <div className="text-4xl md:text-5xl font-oswald font-bold tracking-tight bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+                        {bmr}
+                        <span className="text-xl md:text-2xl text-zinc-400 ml-2">KCAL</span>
+                      </div>
                     </div>
-                    <div className="text-5xl md:text-7xl font-oswald font-bold tracking-tight bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-                      {bmr}
-                      <span className="text-xl md:text-3xl text-zinc-400 ml-2">KCAL</span>
+
+                    <div className="text-center py-6 md:py-8 bg-black/30 rounded-xl border border-zinc-800">
+                      <div className="text-sm md:text-base text-zinc-400 mb-4 uppercase tracking-wider">
+                        Your Total Daily Energy Expenditure (TDEE)
+                      </div>
+                      <div className="text-4xl md:text-5xl font-oswald font-bold tracking-tight bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+                        {tdee}
+                        <span className="text-xl md:text-2xl text-zinc-400 ml-2">KCAL</span>
+                      </div>
                     </div>
                   </div>
                 )}
